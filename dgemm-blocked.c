@@ -1,7 +1,7 @@
 const char* dgemm_desc = "Simple blocked dgemm.";
 
 #ifndef BLOCK_SIZE
-#define BLOCK_SIZE 41
+#define BLOCK_SIZE 128
 #endif
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
@@ -29,7 +29,12 @@ static void do_block(int lda, int M, int N, int K, double* A, double* B, double*
 /* This routine performs a dgemm operation
  *  C := C + A * B
  * where A, B, and C are lda-by-lda matrices stored in column-major format.
- * On exit, A and B maintain their input values. */
+ * On exit, A and B maintain their input values. 
+ 
+ This implementation improves performance by reducing the number of cache misses 
+ that occur when accessing memory, as blocks of data are stored in cache and reused
+ multiple times before being evicted.
+  */
 void square_dgemm(int lda, double* A, double* B, double* C) {
     // For each block-row of A
     for (int i = 0; i < lda; i += BLOCK_SIZE) {
@@ -47,3 +52,11 @@ void square_dgemm(int lda, double* A, double* B, double* C) {
         }
     }
 }
+
+/*
+When the do_block function is called, it needs to know the starting 
+position of the current block within the matrices A, B, and C in order 
+to correctly perform the dgemm operation. The expressions A + i + k * lda, 
+B + k + j * lda, and C + i + j * lda are used to calculate the starting 
+position of the current block within each of the matrices.
+*/

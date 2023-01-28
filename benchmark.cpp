@@ -25,18 +25,19 @@ void reference_dgemm(int n, double alpha, double* A, double* B, double* C) {
 }
 
 void fill(double* p, int n) {
-    static std::random_device rd;
-    static std::default_random_engine gen(rd());
-    static std::uniform_real_distribution<> dis(-1.0, 1.0);
+    // Fills an array of size n with random numbers between -1 and 1 using C++ standard library for random number generation.
+    static std::random_device rd; // std:random_device is a random number generator that produces non-deterministic random numbers.
+    static std::default_random_engine gen(rd()); // std::default_random_engine generates pseudo-random numbers.
+    static std::uniform_real_distribution<> dis(-1.0, 1.0); // std::uniform_real_distribution produces random numbers that are uniformly distributed on a closed interval.
     for (int i = 0; i < n; ++i)
-        p[i] = 2 * dis(gen) - 1;
+        p[i] = 2 * dis(gen) - 1; // dis(gen) generates a random number between -1 and 1.
 }
 
 /* The benchmarking program */
 int main(int argc, char** argv) {
     std::cout << "Description:\t" << dgemm_desc << std::endl << std::endl;
 
-    std::cout << std::fixed << std::setprecision(2);
+    std::cout << std::fixed << std::setprecision(2); // Set the decimal precision to 2.
 
     /* Test sizes should highlight performance dips at multiples of certain powers-of-two */
 
@@ -55,21 +56,33 @@ int main(int argc, char** argv) {
                                 319, 320, 321, 417, 479, 480, 511, 512, 639, 640, 767, 768, 769};
 #endif
 
+
+/*
+std::transform(&argv[1], &argv[argc], std::back_inserter(test_sizes), : This is a call to the std::transform algorithm, 
+which applies a given function to each element in a range, and then stores the results in another container. 
+Here it applies the given function to each command line argument, starting with the second argument (&argv[1]), 
+and ending with the last argument (&argv[argc]), and storing the resulting integer value in the test_sizes vector.
+
+[](char* arg): This is a lambda function that is passed as the 4th argument to the std::transform algorithm. It takes a single argument arg which is of type char*.
+*/
     if (argc > 1) {
         test_sizes.clear();
         std::transform(&argv[1], &argv[argc], std::back_inserter(test_sizes), [](char* arg) {
-            size_t end;
-            int size = std::stoi(arg, &end);
+            size_t end; // This declares a variable end of type size_t which will hold the position of the last valid character of the parsed string.
+            int size = std::stoi(arg, &end); // This converts the string arg to an integer and stores it in the variable size. It also stores the memory address of the last valid character of the parsed string in the variable end.
             if (arg[end] != '\0' || size < 1) {
+                /*
+                Checks if the character after the last valid character is a null character or the parsed integer is less than 1. If true, it throws an exception with a message
+                */
                 throw std::invalid_argument("all arguments must be positive numbers");
             }
             return size;
         });
     }
 
-    std::sort(test_sizes.begin(), test_sizes.end());
+    std::sort(test_sizes.begin(), test_sizes.end()); // Sorts the test_sizes vector in ascending order.
 
-    int nsizes = test_sizes.size();
+    int nsizes = test_sizes.size(); // Stores the size of the test_sizes vector in the variable nsizes.
 
     /* assume last size is also the largest size */
     int nmax = test_sizes[nsizes - 1];
