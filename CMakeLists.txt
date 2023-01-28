@@ -10,7 +10,7 @@ option(ALL_SIZES "Test an extended set of sizes; will take more CPU time." OFF)
 set(MAX_SPEED 56 CACHE STRING "The max speed of the CPU in GF/s")
 
 # Group number
-set(GROUP_NO 00 CACHE STRING "Your group number (two digits)")
+set(GROUP_NO 15 CACHE STRING "Your group number (two digits)")
 
 # Packaging system
 if (NOT ${GROUP_NO} STREQUAL 00)
