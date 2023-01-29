@@ -27,15 +27,15 @@ static void do_block(int lda, int M, int N, int K, double* A, double* B, double*
 // }
     // For each row i of A
     int cpj = 0;
-    for (int j = 0; j < n; ++j) {
+    for (int j = 0; j < N; ++j) {
         // For each column j of B
-        for (int p = 0; p < n; ++p) {
+        for (int p = 0; p < K; ++p) {
             // Compute C(i,j)
-            double bpj = B[p + j * n];
-            for (int i = 0; i < n; i++) {
-                cpj += A[i + p * n] * bpj;
+            double bpj = B[p + j * lda];
+            for (int i = 0; i < M; i++) {
+                cpj += A[i + p * lda] * bpj;
             }
-            C[p + j * n] = cpj;
+            C[p + j * lda] = cpj;
         }
     }
 }
