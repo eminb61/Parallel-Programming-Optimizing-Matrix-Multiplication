@@ -89,14 +89,14 @@ and ending with the last argument (&argv[argc]), and storing the resulting integ
 
     /* allocate memory for all problems */
     std::vector<double> buf(3 * nmax * nmax);
-    std::vector<double> per;
+    std::vector<double> per; // This is a dynamic array that will store the performance of each test size. 
 
     /* For each test size */
     for (int n : test_sizes) {
         /* Create and fill 3 random matrices A,B,C*/
-        double* A = buf.data() + 0;
-        double* B = A + nmax * nmax;
-        double* C = B + nmax * nmax;
+        double* A = buf.data() + 0; // This is a pointer to the first matrix.
+        double* B = A + nmax * nmax; // This is a pointer to the second matrix.
+        double* C = B + nmax * nmax; // This is a pointer to the third matrix.
 
         fill(A, n * n);
         fill(B, n * n);
