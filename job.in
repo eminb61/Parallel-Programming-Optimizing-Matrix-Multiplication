@@ -6,8 +6,8 @@
 #SBATCH -t 00:2:00
 #SBATCH --cpu-freq=3500000
 #SBATCH -J job-@BENCHMARK@
-#SBATCH -o job-@BENCHMARK@.o%j
-#SBATCH -e job-@BENCHMARK@.e%j
+#SBATCH -o sbatch_logs/job-@BENCHMARK@.o%j
+#SBATCH -e sbatch_logs/job-@BENCHMARK@.e%j
 
 export OMP_NUM_THREADS=1
 srun -N 1 -n 1 --cpu-freq=3500000 ./benchmark-@BENCHMARK@
