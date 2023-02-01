@@ -8,15 +8,15 @@ const char* dgemm_desc = "Naive, three-loop dgemm.";
  */
 void square_dgemm(int n, double* A, double* B, double* C) {
     // For each row i of A
-    for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < n; j++) {
         // For each column j of B
-        for (int j = 0; j < n; ++j) {
+        for (int k = 0; k < n; k++) {
             // Compute C(i,j)
-            double cij = C[i + j * n];
-            for (int k = 0; k < n; k++) {
-                cij += A[i + k * n] * B[k + j * n];
+            double bkj = B[k + j * n];
+            for (int i = 0; i < n; i++) {
+                C[i + j * n] += A[i + k * n] * bkj;
             }
-            C[i + j * n] = cij;
+            // C[i + j * n] = cij;
         }
     }
 }
@@ -25,16 +25,15 @@ void square_dgemm(int n, double* A, double* B, double* C) {
 
 // void square_dgemm(int n, double* A, double* B, double* C) {
 //     // For each row i of A
-//     int cpj = 0;
-//     for (int j = 0; j < n; ++j) {
+//     for (int k = 0; k < n; k++) {
 //         // For each column j of B
-//         for (int p = 0; p < n; ++p) {
+//         for (int j = 0; j < n; j++) {
 //             // Compute C(i,j)
-//             double bpj = B[p + j * n];
+//             double bkj = B[k + j * n];
 //             for (int i = 0; i < n; i++) {
-//                 cpj += A[i + p * n] * bpj;
+//                 C[i + j * n] += A[i + k * n] * bkj;
 //             }
-//             C[p + j * n] = cpj;
+//             // C[i + j * n] = cij;
 //         }
 //     }
 // }
