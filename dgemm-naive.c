@@ -15,19 +15,33 @@ const char* dgemm_desc = "Naive, three-loop dgemm.";
 #define B(i, j) B[(i) + (j) * n] // map B(i, j) to array B
 #define C(i, j) C[(i) + (j) * n] // map C(i, j) to array C
 
+
+// // Without caching 
+// void square_dgemm(int n, double* A, double* B, double* C) {
+//     // For each row i of A
+//     for (int j = 0; j < n; ++j) {
+//         // For each column j of B
+//         for (int k = 0; k < n; ++k) {
+//             // // Compute C(i,j)
+//             for (int i = 0; i < n; i++) {
+//                 C(i, j) += A(i, k) * B(k, j);
+//             }
+//         }
+//     }
+// }
+
+
+// With caching
 void square_dgemm(int n, double* A, double* B, double* C) {
-    // double cij;
     // For each row i of A
     for (int j = 0; j < n; ++j) {
         // For each column j of B
         for (int k = 0; k < n; ++k) {
-            // // Compute B(k,j)
-            // double bkj = B(k, j);
+            // // Compute C(i,j)
+            double bkj = B(k, j);
             for (int i = 0; i < n; i++) {
-                // cij += A(i, k) * bkj;
-                C(i, j) += A(i, k) * B(k, j);
+                C(i, j) += A(i, k) * bkj;
             }
-            // C(i, j) = cij;
         }
     }
 }
