@@ -5,6 +5,7 @@ const char* dgemm_desc = "Naive, three-loop dgemm.";
  *  C := C + A * B
  * where A, B, and C are lda-by-lda matrices stored in column-major format.
  * On exit, A and B maintain their input values.
+ * The best ordering is j, k, i.
  */
 void square_dgemm(int n, double* A, double* B, double* C) {
     // For each row i of A
