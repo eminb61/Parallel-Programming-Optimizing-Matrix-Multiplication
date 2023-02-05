@@ -20,10 +20,15 @@ static inline void kernel4by4(int lda, int K, double* A, double* B, double* C) {
     // c20 = C[2];
     // c30 = C[3];
 
-    __m256d C0 = _mm256_loadu_pd(C);
-    __m256d C1 = _mm256_loadu_pd(C + lda);
-    __m256d C2 = _mm256_loadu_pd(C + 2 * lda);
-    __m256d C3 = _mm256_loadu_pd(C + 3 * lda);
+    double* Cp0 = C;
+
+    register __m256d C0 = _mm256_loadu_pd(Cp0);
+    double* Cp1 = Cp0 + lda;
+    register __m256d C1 = _mm256_loadu_pd(Cp1);
+    double* Cp2 = Cp1 + lda;
+    register __m256d C2 = _mm256_loadu_pd(Cp2);
+    double* Cp3 = Cp2 + lda;
+    register __m256d C3 = _mm256_loadu_pd(Cp3);
 
     // c01 = C[lda];
     // c11 = C[1 + lda];
@@ -37,14 +42,24 @@ static inline void kernel4by4(int lda, int K, double* A, double* B, double* C) {
     // c13 = C[1 + 3 * lda];
     // c23 = C[2 + 3 * lda];
     // c33 = C[3 + 3 * lda];
+    double* Ap = A;
+
     for (int k = 0; k < K; k++) {
         // double a0x, a1x, a2x, a3x, bx0, bx1, bx2, bx3;
 
-        __m256d ax = _mm256_loadu_pd(A + k * lda);
-        __m256d bx0 = _mm256_broadcast_sd(B + k);
-        __m256d bx1 = _mm256_broadcast_sd(B + k + lda);
-        __m256d bx2 = _mm256_broadcast_sd(B + k + 2 * lda);
-        __m256d bx3 = _mm256_broadcast_sd(B + k + 3 * lda);
+
+        register __m256d ax = _mm256_loadu_pd(Ap);
+        Ap += lda;
+
+        double* Bp = B + k;
+        register __m256d bx0 = _mm256_broadcast_sd(Bp);
+        Bp += lda;
+        register __m256d bx1 = _mm256_broadcast_sd(Bp);
+        Bp += lda;
+        register __m256d bx2 = _mm256_broadcast_sd(Bp);
+        Bp += lda;
+        register __m256d bx3 = _mm256_broadcast_sd(Bp);
+
         // a0x = A[k * lda];
         // a1x = A[1 + k * lda];
         // a2x = A[2 + k * lda];
@@ -78,10 +93,10 @@ static inline void kernel4by4(int lda, int K, double* A, double* B, double* C) {
     }
 
 
-    _mm256_storeu_pd(C,C0);
-    _mm256_storeu_pd(C + lda,C1);
-    _mm256_storeu_pd(C + 2*lda,C2);
-    _mm256_storeu_pd(C+3*lda,C3);
+    _mm256_storeu_pd(Cp0,C0);
+    _mm256_storeu_pd(Cp1,C1);
+    _mm256_storeu_pd(Cp2,C2);
+    _mm256_storeu_pd(Cp3,C3);
     // C[0] = c00;
     // C[1] = c10;
     // C[2] = c20;
@@ -99,7 +114,6 @@ static inline void kernel4by4(int lda, int K, double* A, double* B, double* C) {
     // C[2 + 3 * lda] = c23;
     // C[3 + 3 * lda] = c33;
 }
-
 
 
 static inline void do_block(int lda, int M, int N, int K, double* A, double* B, double* C) {
