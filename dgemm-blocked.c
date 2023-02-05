@@ -29,16 +29,14 @@ static void do_block(int lda, int M, int N, int K, double* A, double* B, double*
 //     }
 // }
     // For each row i of A
-    int cpj = 0;
-    for (int j = 0; j < N; ++j) {
-        // For each column j of B
-        for (int p = 0; p < K; ++p) {
-            // Compute C(i,j)
-            double bpj = B[p + j * lda];
-            for (int i = 0; i < M; i++) {
-                cpj += A[i + p * lda] * bpj; // Check this
+    for (int j = 0; j < M; ++j) {
+        // For each column k of B
+        for (int k = 0; k < K; ++k) {
+            // // Compute C(i,j)
+            double bkj = B(k, j);
+            for (int i = 0; i < N; i++) {
+                C(i, j) += A(i, k) * bkj;
             }
-            C[p + j * lda] = cpj;
         }
     }
 }
