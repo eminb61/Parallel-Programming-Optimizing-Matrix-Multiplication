@@ -1,14 +1,14 @@
 const char* dgemm_desc = "Simple blocked dgemm.";
 
-#define BLOCK_SIZE 16
+#define BLOCK_SIZE 64
 // #define BLOCK_SIZE_L1 64
 // #define BLOCK_SIZE_L2 256
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
-#define alpha( i,j ) A[ (j)*lda + (i) ]   // map alpha( i,j ) to array A
-#define beta( i,j )  B[ (j)*lda + (i) ]   // map beta( i,j ) to array B
-#define gamma( i,j ) C[ (j)*lda + (i) ]   // map gamma( i,j ) to array C
+// #define alpha( i,j ) A[ (j)*lda + (i) ]   // map alpha( i,j ) to array A
+// #define beta( i,j )  B[ (j)*lda + (i) ]   // map beta( i,j ) to array B
+// #define gamma( i,j ) C[ (j)*lda + (i) ]   // map gamma( i,j ) to array C
 
 #define AA(i, j) A[i + lda * j]   // map alpha( i,j ) to array A
 #define BB(i, j) B[i + lda * j]   // map beta( i,j ) to array B
@@ -16,43 +16,42 @@ const char* dgemm_desc = "Simple blocked dgemm.";
 
 #include<immintrin.h>
 #include<string.h>
-#include<stdio.h>
 
-void pointerFuncA(double* iptr){
-    /*Print the value pointed to by iptr*/
-    printf("A \n");
-    printf("First Element:  %f\n", iptr[0]);
-    printf("991:  %f\n", iptr[990]);
-    printf("992:  %f\n", iptr[991]);
-    printf("Last Element:  %f\n", iptr[1023]);
+// void pointerFuncA(double* iptr){
+//     /*Print the value pointed to by iptr*/
+//     printf("A \n");
+//     printf("First Element:  %f\n", iptr[0]);
+//     printf("991:  %f\n", iptr[990]);
+//     printf("992:  %f\n", iptr[991]);
+//     printf("Last Element:  %f\n", iptr[1023]);
 
-    /*Print the address pointed to by iptr*/
-    printf("Address of value: %p\n", (void*)iptr);
+//     /*Print the address pointed to by iptr*/
+//     printf("Address of value: %p\n", (void*)iptr);
 
-    /*Print the address of iptr itself*/
-    // printf("Address of iptr: %p\n", (void*)&iptr);
-}
-void pointerFuncB(double* iptr){
-    /*Print the value pointed to by iptr*/
-    printf("B \n");
-    printf("First Element:  %f\n", iptr[0]);
-    printf("991:  %f\n", iptr[990]);
-    printf("992:  %f\n", iptr[991]);
-    printf("Last Element:  %f\n", iptr[1023]);
+//     /*Print the address of iptr itself*/
+//     // printf("Address of iptr: %p\n", (void*)&iptr);
+// }
+// void pointerFuncB(double* iptr){
+//     /*Print the value pointed to by iptr*/
+//     printf("B \n");
+//     printf("First Element:  %f\n", iptr[0]);
+//     printf("991:  %f\n", iptr[990]);
+//     printf("992:  %f\n", iptr[991]);
+//     printf("Last Element:  %f\n", iptr[1023]);
 
-    /*Print the address pointed to by iptr*/
-    printf("Address of value: %p\n", (void*)iptr);
+//     /*Print the address pointed to by iptr*/
+//     printf("Address of value: %p\n", (void*)iptr);
 
-    /*Print the address of iptr itself*/
-    // printf("Address of iptr: %p\n", (void*)&iptr);
-}
+//     /*Print the address of iptr itself*/
+//     // printf("Address of iptr: %p\n", (void*)&iptr);
+// }
 
 static void kernel4by4_packed(int lda, int K, double *MP_A, double *MP_B, double *C)
 {
-  __m256d gamma_0123_0 = _mm256_loadu_pd( &gamma( 0,0 ) );
-  __m256d gamma_0123_1 = _mm256_loadu_pd( &gamma( 0,1 ) );
-  __m256d gamma_0123_2 = _mm256_loadu_pd( &gamma( 0,2 ) );
-  __m256d gamma_0123_3 = _mm256_loadu_pd( &gamma( 0,3 ) );
+  __m256d gamma_0123_0 = _mm256_loadu_pd( &CC( 0,0 ) );
+  __m256d gamma_0123_1 = _mm256_loadu_pd( &CC( 0,1 ) );
+  __m256d gamma_0123_2 = _mm256_loadu_pd( &CC( 0,2 ) );
+  __m256d gamma_0123_3 = _mm256_loadu_pd( &CC( 0,3 ) );
 
   __m256d beta_p_j;
    	
@@ -82,52 +81,52 @@ static void kernel4by4_packed(int lda, int K, double *MP_A, double *MP_B, double
 
   /* Store the updated results.  This should be done more carefully since
      there may be an incomplete micro-tile. */
-  _mm256_storeu_pd( &gamma(0,0), gamma_0123_0 );
-  _mm256_storeu_pd( &gamma(0,1), gamma_0123_1 );
-  _mm256_storeu_pd( &gamma(0,2), gamma_0123_2 );
-  _mm256_storeu_pd( &gamma(0,3), gamma_0123_3 );
+  _mm256_storeu_pd( &CC(0,0), gamma_0123_0 );
+  _mm256_storeu_pd( &CC(0,1), gamma_0123_1 );
+  _mm256_storeu_pd( &CC(0,2), gamma_0123_2 );
+  _mm256_storeu_pd( &CC(0,3), gamma_0123_3 );
 }
 
-static inline void kernel4by4(int lda, int K, double *A, double *B,double *C) {
-    /* Declare vector registers to hold 4x4 C and load them */
-    __m256d gamma_0123_0 = _mm256_loadu_pd( &gamma( 0,0 ) );
-    __m256d gamma_0123_1 = _mm256_loadu_pd( &gamma( 0,1 ) );
-    __m256d gamma_0123_2 = _mm256_loadu_pd( &gamma( 0,2 ) );
-    __m256d gamma_0123_3 = _mm256_loadu_pd( &gamma( 0,3 ) );
+// static inline void kernel4by4(int lda, int K, double *A, double *B,double *C) {
+//     /* Declare vector registers to hold 4x4 C and load them */
+//     __m256d gamma_0123_0 = _mm256_loadu_pd( &CC( 0,0 ) );
+//     __m256d gamma_0123_1 = _mm256_loadu_pd( &CC( 0,1 ) );
+//     __m256d gamma_0123_2 = _mm256_loadu_pd( &CC( 0,2 ) );
+//     __m256d gamma_0123_3 = _mm256_loadu_pd( &CC( 0,3 ) );
 
-    for ( int p=0; p<K; p++ ){
-    /* Declare vector register for load/broadcasting beta( p,j ) */
-    __m256d beta_p_j;
+//     for ( int p=0; p<K; p++ ){
+//     /* Declare vector register for load/broadcasting BB( p,j ) */
+//     __m256d beta_p_j;
 
-    /* Declare a vector register to hold the current column of A and load
-        it with the four elements of that column. */
-    __m256d alpha_0123_p = _mm256_loadu_pd( &alpha( 0,p ) );
+//     /* Declare a vector register to hold the current column of A and load
+//         it with the four elements of that column. */
+//     __m256d alpha_0123_p = _mm256_loadu_pd( &AA( 0,p ) );
 
-    /* Load/broadcast beta( p,0 ). */
-    beta_p_j = _mm256_broadcast_sd( &beta( p, 0) );
+//     /* Load/broadcast beta( p,0 ). */
+//     beta_p_j = _mm256_broadcast_sd( &BB( p, 0) );
 
-    /* update the first column of C with the current column of A times
-        beta ( p,0 ) */
-    gamma_0123_0 = _mm256_fmadd_pd( alpha_0123_p, beta_p_j, gamma_0123_0 );
+//     /* update the first column of C with the current column of A times
+//         beta ( p,0 ) */
+//     gamma_0123_0 = _mm256_fmadd_pd( alpha_0123_p, beta_p_j, gamma_0123_0 );
 
-    /* REPEAT for second, third, and fourth columns of C.  Notice that the 
-        current column of A needs not be reloaded. */
-    beta_p_j = _mm256_broadcast_sd( &beta( p, 1) );
-    gamma_0123_1 = _mm256_fmadd_pd( alpha_0123_p, beta_p_j, gamma_0123_1 );
+//     /* REPEAT for second, third, and fourth columns of C.  Notice that the 
+//         current column of A needs not be reloaded. */
+//     beta_p_j = _mm256_broadcast_sd( &BB( p, 1) );
+//     gamma_0123_1 = _mm256_fmadd_pd( alpha_0123_p, beta_p_j, gamma_0123_1 );
 
-    beta_p_j = _mm256_broadcast_sd( &beta( p, 2) );
-    gamma_0123_2 = _mm256_fmadd_pd( alpha_0123_p, beta_p_j, gamma_0123_2 );
+//     beta_p_j = _mm256_broadcast_sd( &BB( p, 2) );
+//     gamma_0123_2 = _mm256_fmadd_pd( alpha_0123_p, beta_p_j, gamma_0123_2 );
 
-    beta_p_j = _mm256_broadcast_sd( &beta( p, 3) );
-    gamma_0123_3 = _mm256_fmadd_pd( alpha_0123_p, beta_p_j, gamma_0123_3 );
-    }
+//     beta_p_j = _mm256_broadcast_sd( &BB( p, 3) );
+//     gamma_0123_3 = _mm256_fmadd_pd( alpha_0123_p, beta_p_j, gamma_0123_3 );
+//     }
 
-    /* Store the updated results */
-    _mm256_storeu_pd( &gamma(0,0), gamma_0123_0 );
-    _mm256_storeu_pd( &gamma(0,1), gamma_0123_1 );
-    _mm256_storeu_pd( &gamma(0,2), gamma_0123_2 );
-    _mm256_storeu_pd( &gamma(0,3), gamma_0123_3 );
-}
+//     /* Store the updated results */
+//     _mm256_storeu_pd( &CC(0,0), gamma_0123_0 );
+//     _mm256_storeu_pd( &CC(0,1), gamma_0123_1 );
+//     _mm256_storeu_pd( &CC(0,2), gamma_0123_2 );
+//     _mm256_storeu_pd( &CC(0,3), gamma_0123_3 );
+// }
 
 // static inline void kernel4by4(int lda, int K, double* A, double* B, double* C) {
 //     double c00, c01, c02, c03, c10, c11, c12, c13, c20, c21, c22, c23, c30, c31, c32, c33;
@@ -366,11 +365,8 @@ void PackMicroPanelA_MRxKC_Pad(int K, int Medge, int lda, double *A, double *Ati
   /* March through A in column-major order, packing into Atilde as we go. */
     /* Full row size micro-panel.*/
     int Mpad = 4 - Medge;
-    // printf("K: %d\n", K);
-    // printf("Medge: %d\n", Medge);
     for (int p=0; p<K; p++){
         for (int i=0; i<Medge; i++) {
-            // printf("%d, %d:  %f\n", i, p, AA(i, p));
             *Atilde++ = AA(i, p);
         }
         Atilde += Mpad;
@@ -384,30 +380,12 @@ void PackBlockA_MCxKC(int M, int K, int lda, double *A, double *Atilde ){
     of zeroes. */
     int Medge = M % 4;
     int Mmax = M - Medge;
-    // printf("Medge: %d\n", Medge);
-    // printf("Mmax: %d\n", Mmax);
-    // printf("before pack \n");
-    // printf("1:  %f\n", Atilde[0]);
-    // printf("256:  %f\n", Atilde[255]);
     for (int i=0; i<Mmax; i+= 4){
         PackMicroPanelA_MRxKC(K, lda, &AA(i, 0), Atilde);
         Atilde += K * 4;
     }
-    // printf("after pack \n");
-    // printf("1:  %f\n", Atilde[0]);
-    // printf("256:  %f\n", Atilde[255]);
-
     if (Medge != 0){
-        // printf("In A pad \n");
-        // for (int i=0; i<20; i++) {
-        //     printf("%d:  %f\n", i, Atilde[i]);
-        // }
-        
         PackMicroPanelA_MRxKC_Pad(K, Medge, lda, &AA(Mmax, 0), Atilde);
-        // printf("After A pad \n");
-        // for (int i=0; i<16; i++) {
-        //     printf("%d:  %f\n", i, Atilde[i]);
-        // }
         Atilde += K * 4;
     }
 }
@@ -456,15 +434,17 @@ void PackPanelB_KCxNC(int K, int N, int lda, double *B, double *Btilde){
 
 void square_dgemm(int lda, double* A, double* B, double* C) {
     // For each block-row of A
-    // printf("lda: %d\n", lda);
-    // printf("A first: %f\n", AA(0,0));
-    // printf("B first: %f\n", BB(0,0));
-    // printf("A last: %f\n", AA(30,30));
-    // printf("B last: %f\n", BB(30,30));
     double *c_p;
     int blk = (lda + 4 - 1) / 4;
     int ldc = blk * 4;
-    double *Ctilde = (double *) malloc(ldc * ldc * sizeof(double)); 
+    double *Ctilde = (double *) calloc(ldc * ldc, sizeof(double)); 
+    if (ldc != lda) {
+        for (int i = 0; i < lda; i ++){
+            memcpy(Ctilde + ldc * i, C + lda * i, lda * sizeof(double));
+        }
+    }else{
+        memcpy(Ctilde, C, lda * lda * sizeof(double));
+    }
     for (int j = 0; j < lda; j += BLOCK_SIZE) {
         // For each block-column of B
         int N = min(BLOCK_SIZE, lda - j);
@@ -473,23 +453,22 @@ void square_dgemm(int lda, double* A, double* B, double* C) {
         for (int k = 0; k < lda; k += BLOCK_SIZE) {
             // Accumulate block dgemms into block of C
             int K = min(BLOCK_SIZE, lda - k);
-            // pointerFuncB(Btilde);
+            
             PackPanelB_KCxNC(K, N, lda, &BB(k, j), Btilde);
-            // pointerFuncB(Btilde);
+            
             double *Atilde = (double *) calloc(BLOCK_SIZE * BLOCK_SIZE, sizeof(double)); // Target L2, MC * KC
             
             for (int i = 0; i < lda; i += BLOCK_SIZE) {
                 // Correct block dimensions if block "goes off edge of" the matrix
                 int M = min(BLOCK_SIZE, lda - i);
                 
-                // pointerFuncA(Atilde);
+                
                 PackBlockA_MCxKC(M, K, lda, &AA(i, k), Atilde);
-                // pointerFuncA(Atilde);
+                
                 // Perform individual block dgemm
                 c_p = &Ctilde[i + j*ldc];
                 for (int v = 0; v < N; v+=4) {
                     for (int u = 0; u < M; u+=4) {
-                        // kernel4by4(lda, K, &a_p[i], &b_p[j * lda], &c_p[i + j*lda]);
                         kernel4by4_packed(ldc, K, &Atilde[u*K], &Btilde[v*K], &c_p[u + v*ldc]);
                     }
                 }
@@ -505,5 +484,4 @@ void square_dgemm(int lda, double* A, double* B, double* C) {
     }else{
         memcpy(C, Ctilde, lda * lda * sizeof(double));
     }
-    // printf("end \n");
 }
