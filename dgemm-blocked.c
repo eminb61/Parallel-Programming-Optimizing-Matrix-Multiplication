@@ -16,9 +16,9 @@ const char* dgemm_desc = "Simple blocked dgemm.";
  */
 static void do_block(int lda, int M, int N, int K, double* A, double* B, double* C) {
     // For each row i of A
-    for (int j = 0; j < N; ++j) {
+    for (int k = 0; k < K; ++k) {
         // For each column k of B
-        for (int k = 0; k < K; ++k) {
+        for (int j = 0; j < N; ++j) {
             // // Compute C(i,j)
             double bkj = B(k, j);
             for (int i = 0; i < M; i++) {
@@ -39,22 +39,17 @@ static void do_block(int lda, int M, int N, int K, double* A, double* B, double*
   */
 void square_dgemm(int lda, double* A, double* B, double* C) {
     // For each block-row of A
-    for (int i = 0; i < lda; i += BLOCK_SIZE) {
-        int M = min(BLOCK_SIZE, lda - i);
+    for (int j = 0; j < lda; j += BLOCK_SIZE) {
+        int N = min(BLOCK_SIZE, lda - j);
         // For each block-column of B
-        for (int j = 0; j < lda; j += BLOCK_SIZE) {
-            int N = min(BLOCK_SIZE, lda - j);
-            // Accumulate block dgemms into block of C
-            for (int k = 0; k < lda; k += BLOCK_SIZE) {
-                // Correct block dimensions if block "goes off edge of" the matrix
-                int K = min(BLOCK_SIZE, lda - k);
-                // Perform individual block dgemm
-                do_block(lda, M, N, K, &A(i, k), &B(k, j), &C(i, j));
-                // do_block(lda, M, N, K, A + i + k * lda, B + k + j * lda, C + i + j * lda);
+        for (int i = 0; i < lda; i += BLOCK_SIZE) {
+            int M = min(BLOCK_SIZE, lda - i);
+            // Perform individual block dgemm
+            do_block(lda, M, N, lda, &A(i, 0), &B(0, j), &C(i, j));
+            // do_block(lda, M, N, K, A + i + k * lda, B + k + j * lda, C + i + j * lda);
             }
         }
     }
-}
 
 /*
 When the do_block function is called, it needs to know the starting 
