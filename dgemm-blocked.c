@@ -1,8 +1,11 @@
 const char* dgemm_desc = "Simple blocked dgemm.";
 
-#define BLOCK_SIZE 64
+// #define BLOCK_SIZE 64
 // #define BLOCK_SIZE_L1 64
 // #define BLOCK_SIZE_L2 256
+#define BLK_J 128
+#define BLK_K 64
+#define BLK_I 32
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
@@ -318,48 +321,32 @@ static void kernel4by4_packed(int lda, int K, double *MP_A, double *MP_B, double
 //     }
 // }
 
+static inline void copy_mem (int K, double* a_src, double* a_dest) {
+  /* For each 4xK block-row of A */
+  for (int i = 0; i < K; ++i) 
+  {
+    *a_dest++ = *a_src;
+    *a_dest++ = *(a_src+1);
+    *a_dest++ = *(a_src+2);
+    *a_dest++ = *(a_src+3);
+    a_src += 4;
+  }
+}
 
-// static inline void copy_a (int lda, int K, double* a_src, double* a_dest) {
-//   /* For each 4xK block-row of A */
-//   for (int i = 0; i < K; ++i) 
-//   {
-//     *a_dest++ = *a_src;
-//     *a_dest++ = *(a_src+1);
-//     *a_dest++ = *(a_src+2);
-//     *a_dest++ = *(a_src+3);
-//     a_src += lda;
-//   }
-// }
-
-// static inline void copy_b (int lda, int K, double* b_src, double* b_dest) {
-//   double *b_ptr0, *b_ptr1, *b_ptr2, *b_ptr3;
-//   b_ptr0 = b_src;
-//   b_ptr1 = b_ptr0 + lda;
-//   b_ptr2 = b_ptr1 + lda;
-//   b_ptr3 = b_ptr2 + lda;
-
-//   for (int i = 0; i < K; ++i) 
-//   {
-//     *b_dest++ = *b_ptr0++;
-//     *b_dest++ = *b_ptr1++;
-//     *b_dest++ = *b_ptr2++;
-//     *b_dest++ = *b_ptr3++;
-//   }
-// }
-
-void PackMicroPanelA_MRxKC(int K, int lda, double *A, double *Atilde ){
+static inline void PackMicroPanelA_MRxKC(int K, int lda, double *A, double *Atilde ){
 /* Pack a micro-panel of A into buffer pointed to by Atilde. 
    This is an unoptimized implementation for general MR and KC. */
   /* March through A in column-major order, packing into Atilde as we go. */
     /* Full row size micro-panel.*/
     for (int p=0; p<K; p++){
-        for (int i=0; i<4; i++) {
-            *Atilde++ = AA(i, p);
-        }
+        *Atilde++ = AA(0, p);
+        *Atilde++ = AA(1, p);
+        *Atilde++ = AA(2, p);
+        *Atilde++ = AA(3, p);
     }
 }
 
-void PackMicroPanelA_MRxKC_Pad(int K, int Medge, int lda, double *A, double *Atilde ){
+static inline void PackMicroPanelA_MRxKC_Pad(int K, int Medge, int lda, double *A, double *Atilde ){
 /* Pack a micro-panel of A into buffer pointed to by Atilde. 
    This is an unoptimized implementation for general MR and KC. */
   /* March through A in column-major order, packing into Atilde as we go. */
@@ -369,11 +356,13 @@ void PackMicroPanelA_MRxKC_Pad(int K, int Medge, int lda, double *A, double *Ati
         for (int i=0; i<Medge; i++) {
             *Atilde++ = AA(i, p);
         }
-        Atilde += Mpad;
+        for (int i=0; i<Mpad; i++){
+            *Atilde++ = 0;
+        }
     }
 }
 
-void PackBlockA_MCxKC(int M, int K, int lda, double *A, double *Atilde ){
+static inline void PackBlockA_MCxKC(int M, int K, int lda, double *A, double *Atilde ){
 /* Pack a  m x k block of A into a MC x KC buffer.   MC is assumed to
     be a multiple of MR.  The block is packed into Atilde a micro-panel
     at a time. If necessary, the last micro-panel is padded with rows
@@ -386,11 +375,10 @@ void PackBlockA_MCxKC(int M, int K, int lda, double *A, double *Atilde ){
     }
     if (Medge != 0){
         PackMicroPanelA_MRxKC_Pad(K, Medge, lda, &AA(Mmax, 0), Atilde);
-        Atilde += K * 4;
     }
 }
 
-void PackMicroPanelB_KCxNR_Pad(int K, int Nedge, int lda, double *B, double *Btilde){
+static inline void PackMicroPanelB_KCxNR_Pad(int K, int Nedge, int lda, double *B, double *Btilde){
 /* Pack a micro-panel of B into buffer pointed to by Btilde.
    This is an unoptimized implementation for general KC and NR.
    k is assumed to be less then or equal to KC.
@@ -400,23 +388,26 @@ void PackMicroPanelB_KCxNR_Pad(int K, int Nedge, int lda, double *B, double *Bti
         for (int j=0; j<Nedge; j++){
             *Btilde++ = BB(p, j);
         }
-        Btilde += Npad;
+        for (int i=0; i<Npad; i++){
+            *Btilde++ = 0;
+        }
     }
 }
 
-void PackMicroPanelB_KCxNR(int K, int lda, double *B, double *Btilde){
+static inline void PackMicroPanelB_KCxNR(int K, int lda, double *B, double *Btilde){
 /* Pack a micro-panel of B into buffer pointed to by Btilde.
    This is an unoptimized implementation for general KC and NR.
    k is assumed to be less then or equal to KC.
    n is assumed to be less then or equal to NR.  */
     for (int p=0; p<K; p++){
-        for (int j=0; j<4; j++){
-            *Btilde++ = BB(p, j);
-        }
+        *Btilde++ = BB(p, 0);
+        *Btilde++ = BB(p, 1);
+        *Btilde++ = BB(p, 2);
+        *Btilde++ = BB(p, 3);
     }
 }
 
-void PackPanelB_KCxNC(int K, int N, int lda, double *B, double *Btilde){
+static inline void PackPanelB_KCxNC(int K, int N, int lda, double *B, double *Btilde){
 /* Pack a k x n panel of B in to a KC x NC buffer.
    The block is copied into Btilde a micro-panel at a time. */
     int Nedge = N % 4;
@@ -427,7 +418,6 @@ void PackPanelB_KCxNC(int K, int N, int lda, double *B, double *Btilde){
     }
     if (Nedge != 0){
         PackMicroPanelB_KCxNR_Pad(K, Nedge, lda, &BB(0, Nmax), Btilde);
-        Btilde += K * 4;
     }
    
 }
@@ -437,7 +427,7 @@ void square_dgemm(int lda, double* A, double* B, double* C) {
     double *c_p;
     int blk = (lda + 4 - 1) / 4;
     int ldc = blk * 4;
-    double *Ctilde = (double *) calloc(ldc * ldc, sizeof(double)); 
+    double *Ctilde = (double *) malloc(ldc * ldc * sizeof(double)); 
     if (ldc != lda) {
         for (int i = 0; i < lda; i ++){
             memcpy(Ctilde + ldc * i, C + lda * i, lda * sizeof(double));
@@ -445,31 +435,34 @@ void square_dgemm(int lda, double* A, double* B, double* C) {
     }else{
         memcpy(Ctilde, C, lda * lda * sizeof(double));
     }
-    for (int j = 0; j < lda; j += BLOCK_SIZE) {
+    for (int j = 0; j < lda; j += BLK_J) {
         // For each block-column of B
-        int N = min(BLOCK_SIZE, lda - j);
+        int N = min(BLK_J, lda - j);
         
-        double *Btilde = (double *) calloc(BLOCK_SIZE * BLOCK_SIZE, sizeof(double)); // Target L3, KC * NC
-        for (int k = 0; k < lda; k += BLOCK_SIZE) {
+        double *Btilde = (double *) malloc(BLK_K * BLK_J * sizeof(double)); // Target L3, KC * NC
+        for (int k = 0; k < lda; k += BLK_K) {
             // Accumulate block dgemms into block of C
-            int K = min(BLOCK_SIZE, lda - k);
+            int K = min(BLK_K, lda - k);
             
             PackPanelB_KCxNC(K, N, lda, &BB(k, j), Btilde);
             
-            double *Atilde = (double *) calloc(BLOCK_SIZE * BLOCK_SIZE, sizeof(double)); // Target L2, MC * KC
+            double *Atilde = (double *) malloc(BLK_I * BLK_K * sizeof(double)); // Target L2, MC * KC
             
-            for (int i = 0; i < lda; i += BLOCK_SIZE) {
+            for (int i = 0; i < lda; i += BLK_I) {
                 // Correct block dimensions if block "goes off edge of" the matrix
-                int M = min(BLOCK_SIZE, lda - i);
-                
-                
+                int M = min(BLK_I, lda - i);
                 PackBlockA_MCxKC(M, K, lda, &AA(i, k), Atilde);
-                
                 // Perform individual block dgemm
                 c_p = &Ctilde[i + j*ldc];
+                double B_block[4*K];
+                double *b_ptr;
                 for (int v = 0; v < N; v+=4) {
+                    b_ptr = &B_block[0];
+                    copy_mem(K, &Btilde[v*K], b_ptr);
                     for (int u = 0; u < M; u+=4) {
-                        kernel4by4_packed(ldc, K, &Atilde[u*K], &Btilde[v*K], &c_p[u + v*ldc]);
+                        // a_ptr = &A_block[0];
+                        // if (v == 0) copy_mem(K, &Atilde[u*K], a_ptr);
+                        kernel4by4_packed(ldc, K, &Atilde[u*K], b_ptr, &c_p[u + v*ldc]);
                     }
                 }
             }
