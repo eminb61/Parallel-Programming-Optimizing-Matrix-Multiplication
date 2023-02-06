@@ -4,7 +4,6 @@ const char* dgemm_desc = "Simple blocked dgemm.";
 #define BLK_K 96
 #define BLK_I 48
 
-#define KS_LCD 24
 #define KS_A 8
 #define KS_B 6
 
@@ -374,8 +373,10 @@ static double * restrict Btilde __attribute__ ((aligned(ALIGNMENT)));
 void square_dgemm(int lda, double* A, double* B, double* C) {
     // For each block-row of A
     double *c_p;
-    int blk = (lda + KS_A - 1) / KS_A;
-    int ldc = blk * KS_A;
+    int blk_h = (lda + KS_A - 1) / KS_A;
+    int blk_w = (lda + KS_B - 1) / KS_B;
+    int ldc_h = blk_h * KS_A;
+    int ldc_w = blk_w * KS_B;
     // int blk_j = min(BLK_J, ldc);
     // int blk_k = min(BLK_K, ldc);
     // int blk_i = min(BLK_I, ldc);
@@ -390,10 +391,10 @@ void square_dgemm(int lda, double* A, double* B, double* C) {
     //     blk_i = 48;
     //     blk_k = 48;
     // }
-    Ctilde = _mm_malloc(ldc * ldc * sizeof(double), ALIGNMENT);
-    if (ldc != lda) {
+    Ctilde = _mm_malloc(ldc_h * ldc_w * sizeof(double), ALIGNMENT);
+    if (ldc_w != lda || ldc_h != lda) {
         for (int i = 0; i < lda; i ++){
-            memcpy(Ctilde + ldc * i, C + lda * i, lda * sizeof(double));
+            memcpy(Ctilde + ldc_w * i, C + lda * i, lda * sizeof(double));
         }
     }else{
         memcpy(Ctilde, C, lda * lda * sizeof(double));
@@ -414,19 +415,19 @@ void square_dgemm(int lda, double* A, double* B, double* C) {
                 int M = min(blk_i, lda - i);
                 PackBlockA_MCxKC(M, K, lda, &AA(i, k), Atilde);
                 // Perform individual block dgemm
-                c_p = &Ctilde[i + j*ldc];
+                c_p = &Ctilde[i + j*ldc_w];
                 for (int v = 0; v < N; v+=KS_B) {
                     for (int u = 0; u < M; u+=KS_A) {
                         // kernel4by4_packed(ldc, K, &Atilde[u*K], b_ptr, &c_p[u + v*ldc]);
-                        kernel8by6_packed(ldc, K, &Atilde[u*K], &Btilde[v*K], &c_p[u + v*ldc]);
+                        kernel8by6_packed(ldc_w, K, &Atilde[u*K], &Btilde[v*K], &c_p[u + v*ldc_w]);
                     }
                 }
             }
         }
     }
-    if (ldc != lda) {
+    if (ldc_w != lda || ldc_h != lda) {
         for (int i = 0; i < lda; i ++){
-            memcpy(C + lda * i, Ctilde + ldc * i, ldc * sizeof(double));
+            memcpy(C + lda * i, Ctilde + ldc_w * i, ldc_w * sizeof(double));
         }
     }else{
         memcpy(C, Ctilde, lda * lda * sizeof(double));
