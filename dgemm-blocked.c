@@ -13,7 +13,7 @@ const char* dgemm_desc = "Simple blocked dgemm.";
  * This auxiliary subroutine performs a smaller dgemm operation
  *  C := C + A * B
  * where C is M-by-N, A is M-by-K, and B is K-by-N.
- */
+ */ 
 static void do_block(int lda, int M, int N, int K, double* A, double* B, double* C) {
     // For each row i of A
     for (int k = 0; k < K; ++k) {
